@@ -1,0 +1,1 @@
+vk = 'YOUR TOKEN HERE'
