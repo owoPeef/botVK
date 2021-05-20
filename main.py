@@ -42,7 +42,7 @@ while commands_total != a:
     f.write("["+datetime.now().strftime("%H:%M:%S")+"] Command " + commands_list[a] + " loaded!\n")
     f.close()
     os.chdir(currentDir)
-    print("Command " + commands_list[a] + " loaded!")
+    print("Command " + commands_list[a] + " loaded.")
     a += 1
 
 for event in longpoll.listen():
