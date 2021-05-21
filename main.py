@@ -9,7 +9,7 @@ from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 import config
 # import commands
 
-vk_session = vk_api.VkApi(token=config.vk)
+vk_session = vk_api.VkApi(token=config.vk, api_version='5.144')
 lp = VkBotLongPoll(vk_session, 204672845)
 vk = vk_session.get_api()
 
@@ -39,8 +39,6 @@ while commands_total != a:
     if not line:
         break
     if not line.find("#"):
-        os.write(fileOpen, str.encode("["+datetime.now().strftime("%H:%M:%S")+"] (CONSOLE): " + commands_list[a] + " is not a command. Skip.\n"))
-        print(commands_list[a] + " is not a command. Skip.")
         a += 1
     else:
         os.write(fileOpen, str.encode("["+datetime.now().strftime("%H:%M:%S")+"] (CONSOLE): Command " + commands_list[a] + " loaded.\n"))
@@ -113,6 +111,32 @@ for event in lp.listen():
                     random_id=random.randint(0, 10000),
                     message=message,
                     user_id=sender
+                )
+        if event.message['text'] == '.онлайн':
+            chat_users = vk.messages.getConversationMembers(
+                peer_id=2000000000 + int(event.chat_id),
+                count=100,
+                fields="online"
+            )
+            a = 0
+            online = 0
+            users_online = []
+            while a != chat_users['count']-len(chat_users['groups']):
+                if chat_users['profiles'][a]['online'] == 1:
+                    online += 1
+                    users_online.append(str(online) + ". [id" + str(chat_users['profiles'][a]['id']) + "|" + str(chat_users['profiles'][a]['first_name']) + " " + str(chat_users['profiles'][a]['last_name']) + "]\n")
+                a += 1
+            d = 0
+            message_users = ""
+            while d != len(users_online):
+                message_users += users_online[d]
+                d += 1
+            message = "Пользователи онлайн: \n" + message_users
+            if event.from_chat:
+                vk.messages.send(
+                    random_id=random.randint(0, 10000),
+                    message=message,
+                    chat_id=event.chat_id
                 )
 os.close(fileOpen)
 os.close(usersFile)
