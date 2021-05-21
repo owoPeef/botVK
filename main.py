@@ -63,6 +63,31 @@ for event in lp.listen():
                 "INSERT INTO users (user_id, reg_date) VALUES ('%s', '%s')" % (int(sender), now)
             )
             db.commit()
+        if event.from_chat:
+            chat_id = event.chat_id + 2000000000
+            db_cursor.execute("SELECT * FROM chats WHERE chat_id='%s'" % (int(chat_id)))
+            row = db_cursor.fetchone()
+            print(chat_id)
+            if int(db_cursor.rowcount) == -1:
+                db_cursor.execute("SELECT * FROM chats WHERE user_id='%s'" % (int(sender)))
+                db_cursor.fetchone()
+                if int(db_cursor.rowcount) == -1:
+                    db_cursor.execute("INSERT INTO chats (chat_id, user_id, messages) VALUES ('%s', '%s', '%s')" % (int(chat_id), int(sender), int(0)))
+                    db.commit()
+            else:
+                db_cursor.execute("SELECT * FROM chats WHERE user_id='%s'" % (int(sender)))
+                db_cursor.fetchone()
+                print(db_cursor.rowcount)
+                if int(db_cursor.rowcount) == -1:
+                    db_cursor.execute("INSERT INTO chats (chat_id, user_id, messages) VALUES ('%s', '%s', '%s')" % (
+                    int(chat_id), int(sender), int(0)))
+                    db.commit()
+                total = int(row['messages']) + 1
+                db_cursor.execute(
+                    "UPDATE chats SET messages='%s' WHERE chat_id='%s' AND user_id='%s'" % (int(total), int(chat_id), int(sender))
+                )
+                db.commit()
+
         if event.message['text'] == '.команды':
             message = 'Все команды, которые доступны в боте: '
             if event.from_chat:
@@ -124,14 +149,17 @@ for event in lp.listen():
             while a != chat_users['count']-len(chat_users['groups']):
                 if chat_users['profiles'][a]['online'] == 1:
                     online += 1
-                    users_online.append(str(online) + ". [id" + str(chat_users['profiles'][a]['id']) + "|" + str(chat_users['profiles'][a]['first_name']) + " " + str(chat_users['profiles'][a]['last_name']) + "]\n")
+                    users_online.append(str(online) + ". [id" + str(chat_users['profiles'][a]['id']) + "|" + str(chat_users['profiles'][a]['first_name']) + " " + str(chat_users['profiles'][a]['last_name']) + "] -- online\n")
                 a += 1
             d = 0
             message_users = ""
             while d != len(users_online):
                 message_users += users_online[d]
                 d += 1
-            message = "Пользователи онлайн: \n" + message_users
+            if online != 0:
+                message = "Пользователи онлайн:\n" + message_users
+            else:
+                message = "Пользователей онлайн:\n0"
             if event.from_chat:
                 vk.messages.send(
                     random_id=random.randint(0, 10000),
