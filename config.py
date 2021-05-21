@@ -1,1 +1,5 @@
 vk = 'YOUR TOKEN HERE'
+db_host = '127.0.0.1'
+db = 'bot'
+db_user = 'root'
+db_password = 'root'
