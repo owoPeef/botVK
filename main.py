@@ -1,15 +1,15 @@
 import os
 import random
 import vk_api
-from datetime import time, datetime
+from datetime import datetime
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 
 import config
-import commands
+# import commands
 from utils import debuger
 
 vk_session = vk_api.VkApi(token=config.vk)
-longpoll = VkBotLongPoll(vk_session, 204672845)
+lp = VkBotLongPoll(vk_session, 204672845)
 vk = vk_session.get_api()
 
 try:
@@ -18,11 +18,9 @@ try:
 except FileExistsError:
     pass
 now = datetime.now()
-currentDir = os.getcwd()
-os.chdir('logs')
-f = open(str(now.strftime("%H.%M.%S_%d.%m.%Y")) + ".txt", "w")
+d = open("logs/" + str(now.strftime("%H.%M.%S_%d.%m.%Y")) + ".txt", "w")
+fileOpen = os.open("logs/" + str(now.strftime("%H.%M.%S_%d.%m.%Y")) + ".txt", os.O_RDWR)
 
-os.chdir(currentDir)
 commands_total = len(open("commands.py").readlines())
 file1 = open('commands.py', 'r')
 commands_list = []
@@ -38,26 +36,28 @@ while commands_total != a:
     if not line:
         break
     if not line.find("#"):
+        os.write(fileOpen, str.encode("["+datetime.now().strftime("%H:%M:%S")+"] (CONSOLE): " + commands_list[a] + " is not a command. Skip.\n"))
         print(commands_list[a] + " is not a command. Skip.")
         a += 1
     else:
+        os.write(fileOpen, str.encode("["+datetime.now().strftime("%H:%M:%S")+"] (CONSOLE): Command " + commands_list[a] + " loaded.\n"))
         print("Command " + commands_list[a] + " loaded.")
         a += 1
 
-for event in longpoll.listen():
+for event in lp.listen():
     if event.type == VkBotEventType.MESSAGE_NEW:
-        debuger.debug("message_new", event.message['text'])
+        debuger.debug("new message", event.message['text'])
         if event.message['text'] == '.команды':
             if event.from_chat:
-                total = []
-                while (t != commands_total):
-                    line = file1.readline()
-                    if not line:
-                        break
-                    total.append(line.split(None, 1)[0])
                 vk.messages.send(
                     random_id=random.randint(0, 10000),
                     message='Все команды, которые доступны в боте: ',
                     chat_id=event.chat_id
                 )
-f.close()
+            if event.from_user:
+                vk.messages.send(
+                    random_id=random.randint(0, 10000),
+                    message='Все команды, которые доступны в боте: ',
+                    user_id=event.message.from_id
+                )
+os.close(fileOpen)
