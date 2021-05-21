@@ -1,5 +1,4 @@
 import os
-import json
 import random
 import vk_api
 import mysql.connector
@@ -20,9 +19,7 @@ except FileExistsError:
     pass
 now = datetime.now()
 fileOpen = os.open("logs/" + str(now.strftime("%H.%M.%S_%d.%m.%Y")) + ".txt", os.O_RDWR | os.O_CREAT)
-usersFile = os.open("users.json", os.O_RDWR | os.O_CREAT)
 db = mysql.connector.connect(user=config.db_user, password=config.db_password, host=config.db_host, database=config.db)
-os.write(usersFile, str.encode("[]"))
 
 commands_total = len(open("commands.py").readlines())
 file1 = open('commands.py', 'r')
@@ -69,7 +66,7 @@ for event in lp.listen():
             row2 = db_cursor.fetchone()
             if int(db_cursor.rowcount) == 0 or int(db_cursor.rowcount) == -1:
                 if int(db_cursor.rowcount) == -1:
-                    symbols = len(event.message)
+                    symbols = int(len(event.message['text']))
                     db_cursor.execute("INSERT INTO chats (chat_id, user_id, messages, symbols) VALUES ('%s', '%s', '%s', '%s')" % (int(chat_id), int(sender), int(1), int(symbols)))
                     db.commit()
             else:
@@ -140,10 +137,12 @@ for event in lp.listen():
             a = 0
             online = 0
             users_online = []
-            while a != chat_users['count']-len(chat_users['groups']):
+            while a != chat_users['count'] - len(chat_users['groups']):
                 if chat_users['profiles'][a]['online'] == 1:
                     online += 1
-                    users_online.append(str(online) + ". [id" + str(chat_users['profiles'][a]['id']) + "|" + str(chat_users['profiles'][a]['first_name']) + " " + str(chat_users['profiles'][a]['last_name']) + "] -- online\n")
+                    users_online.append(str(online) + ". [id" + str(chat_users['profiles'][a]['id']) + "|" + str(
+                        chat_users['profiles'][a]['first_name']) + " " + str(
+                        chat_users['profiles'][a]['last_name']) + "] -- online\n")
                 a += 1
             d = 0
             message_users = ""
@@ -160,6 +159,18 @@ for event in lp.listen():
                     message=message,
                     chat_id=event.chat_id
                 )
+        if event.message['text'] == '.статистика':
+            if event.from_chat:
+                chat_id = int(event.chat_id)
+                db_cursor.execute("SELECT * FROM chats WHERE chat_id='%s' AND user_id='%s'" % (
+                2000000000 + int(chat_id), int(sender)))
+                stats = db_cursor.fetchone()
+                message = "Статистика пользователя: \nMSGs: " + str(stats['messages']) + " \nSymbols: " + str(
+                stats['symbols'])
+                vk.messages.send(
+                    random_id=random.randint(0, 10000),
+                    message=message,
+                    chat_id=chat_id
+                )
 os.close(fileOpen)
-os.close(usersFile)
 db.close()
