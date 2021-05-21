@@ -1,8 +1,8 @@
 import os
-import sys
 import json
 import random
 import vk_api
+import mysql.connector
 from datetime import datetime
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 
@@ -22,6 +22,7 @@ except FileExistsError:
 now = datetime.now()
 fileOpen = os.open("logs/" + str(now.strftime("%H.%M.%S_%d.%m.%Y")) + ".txt", os.O_RDWR | os.O_CREAT)
 usersFile = os.open("users.json", os.O_RDWR | os.O_CREAT)
+db = mysql.connector.connect(user=config.db_user, password=config.db_password, host=config.db_host, database=config.db)
 os.write(usersFile, str.encode("[]"))
 
 commands_total = len(open("commands.py").readlines())
@@ -49,7 +50,21 @@ while commands_total != a:
 
 for event in lp.listen():
     if event.type == VkBotEventType.MESSAGE_NEW:
-        debuger.debug("new message", event.message['text'])
+        sender = event.message.from_id
+        if event.from_chat:
+            debuger.debug("new message from chat", event.message['text'])
+        if event.from_user:
+            debuger.debug("new message from user (id" + str(int(sender)) + ")", event.message['text'])
+        db_cursor = db.cursor(dictionary=True)
+        db_cursor.execute("SELECT * FROM users WHERE user_id='%s'" % (int(sender)))
+        row = db_cursor.fetchall()
+        if int(db_cursor.rowcount) == -1:
+            print("NEW USER CREATED (https://vk.com/id"+str(int(sender)) + ")")
+            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            db_cursor.execute(
+                "INSERT INTO users (user_id, reg_date) VALUES ('%s', '%s')" % (int(sender), now)
+            )
+            db.commit()
         if event.message['text'] == '.команды':
             if event.from_chat:
                 vk.messages.send(
@@ -61,7 +76,22 @@ for event in lp.listen():
                 vk.messages.send(
                     random_id=random.randint(0, 10000),
                     message='Все команды, которые доступны в боте: ',
-                    user_id=event.message.from_id
+                    user_id=sender
+                )
+        if event.message['text'] == '.профиль':
+            generated_message = 'Профиль id'+str(int(sender))+': \n' + str(row[0]['reg_date'])
+            if event.from_chat:
+                vk.messages.send(
+                    random_id=random.randint(0, 10000),
+                    message=generated_message,
+                    chat_id=event.chat_id
+                )
+            if event.from_user:
+                vk.messages.send(
+                    random_id=random.randint(0, 10000),
+                    message=generated_message,
+                    user_id=sender
                 )
 os.close(fileOpen)
 os.close(usersFile)
+db.close()
