@@ -2,6 +2,7 @@ import os
 import glob
 
 while True:
+    find = 0
     want = input("What do you want to do?\n")
 
     if want == "delete logs":
@@ -9,9 +10,7 @@ while True:
         for f in files:
             os.remove(f)
         print("All logs was deleted\n")
+        find = 1
 
-    if want != "delete logs" and want != "":
+    if find == 0:
         print('\nCommand "' + str(want) + '" not found!\n')
-
-    if want != "delete logs" and want == "":
-        exit()
