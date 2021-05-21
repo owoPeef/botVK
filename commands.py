@@ -4,3 +4,5 @@ support = ".помощь"
 profile = ".профиль [user_id/user_url]"
 # Показывает онлайн беседы
 online = ".онлайн"
+# Статистика пользователя в беседе
+statistics = ".статистика [user_id/user_url]"
