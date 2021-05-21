@@ -8,7 +8,6 @@ from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 
 import config
 # import commands
-from utils import debuger
 
 vk_session = vk_api.VkApi(token=config.vk)
 lp = VkBotLongPoll(vk_session, 204672845)
@@ -52,13 +51,14 @@ for event in lp.listen():
     if event.type == VkBotEventType.MESSAGE_NEW:
         sender = event.message.from_id
         if event.from_chat:
-            debuger.debug("new message from chat", event.message['text'])
+            os.write(fileOpen, str.encode("[" + datetime.now().strftime("%H:%M:%S") + "] (VK): new message from chat (sender: id" + str(int(sender)) + ") " + event.message['text'] + "\n"))
         if event.from_user:
-            debuger.debug("new message from user (id" + str(int(sender)) + ")", event.message['text'])
+            os.write(fileOpen, str.encode("[" + datetime.now().strftime("%H:%M:%S") + "] (VK): new message from user (id" + str(int(sender)) + ") " + event.message['text'] + "\n"))
         db_cursor = db.cursor(dictionary=True)
         db_cursor.execute("SELECT * FROM users WHERE user_id='%s'" % (int(sender)))
         row = db_cursor.fetchall()
-        if int(db_cursor.rowcount) == -1:
+        if int(db_cursor.rowcount) == 0:
+            os.write(fileOpen, str.encode("[" + datetime.now().strftime("%H:%M:%S") + "] (VK): NEW USER CREATED (https://vk.com/id"+str(int(sender)) + ")\n"))
             print("NEW USER CREATED (https://vk.com/id"+str(int(sender)) + ")")
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             db_cursor.execute(
@@ -66,30 +66,52 @@ for event in lp.listen():
             )
             db.commit()
         if event.message['text'] == '.команды':
+            message = 'Все команды, которые доступны в боте: '
             if event.from_chat:
                 vk.messages.send(
                     random_id=random.randint(0, 10000),
-                    message='Все команды, которые доступны в боте: ',
+                    message=message,
                     chat_id=event.chat_id
                 )
             if event.from_user:
                 vk.messages.send(
                     random_id=random.randint(0, 10000),
-                    message='Все команды, которые доступны в боте: ',
+                    message=message,
                     user_id=sender
                 )
         if event.message['text'] == '.профиль':
-            generated_message = 'Профиль id'+str(int(sender))+': \n' + str(row[0]['reg_date'])
+            db_cursor.execute("SELECT * FROM users WHERE user_id='%s'" % (int(sender)))
+            row = db_cursor.fetchall()
+            user_info = vk.users.get(
+                user_ids=sender,
+                fields="sex",
+                name_case="nom"
+            )
+            if int(user_info[0]['sex']) == 2:
+                user_info = vk.users.get(
+                    user_ids=sender,
+                    fields="sex",
+                    name_case="gen"
+                )
+                message_sex = str(user_info[0]['last_name']) + " " + str(user_info[0]['first_name'])
+            else:
+                user_info = vk.users.get(
+                    user_ids=sender,
+                    fields="sex",
+                    name_case="gen"
+                )
+                message_sex = str(user_info[0]['first_name']) + " " + str(user_info[0]['last_name'])
+            message = "Профиль " + message_sex + ":\n" + str(row[0]['reg_date'])
             if event.from_chat:
                 vk.messages.send(
                     random_id=random.randint(0, 10000),
-                    message=generated_message,
+                    message=message,
                     chat_id=event.chat_id
                 )
             if event.from_user:
                 vk.messages.send(
                     random_id=random.randint(0, 10000),
-                    message=generated_message,
+                    message=message,
                     user_id=sender
                 )
 os.close(fileOpen)
