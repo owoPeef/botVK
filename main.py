@@ -18,7 +18,6 @@ try:
 except FileExistsError:
     pass
 now = datetime.now()
-d = open("logs/" + str(now.strftime("%H.%M.%S_%d.%m.%Y")) + ".txt", "w")
 fileOpen = os.open("logs/" + str(now.strftime("%H.%M.%S_%d.%m.%Y")) + ".txt", os.O_RDWR)
 
 commands_total = len(open("commands.py").readlines())
