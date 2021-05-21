@@ -6,7 +6,6 @@ from datetime import datetime
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 
 import config
-# import commands
 
 vk_session = vk_api.VkApi(token=config.vk, api_version='5.144')
 lp = VkBotLongPoll(vk_session, 204672845)
