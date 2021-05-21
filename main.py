@@ -34,16 +34,15 @@ with open('commands.py', 'r') as f:
 
 a = 0
 while commands_total != a:
-    os.chdir('logs')
-    f = open(str(now.strftime("%H.%M.%S_%d.%m.%Y")) + ".txt", "w")
     line = file1.readline()
     if not line:
         break
-    f.write("["+datetime.now().strftime("%H:%M:%S")+"] Command " + commands_list[a] + " loaded!\n")
-    f.close()
-    os.chdir(currentDir)
-    print("Command " + commands_list[a] + " loaded.")
-    a += 1
+    if not line.find("#"):
+        print(commands_list[a] + " is not a command. Skip.")
+        a += 1
+    else:
+        print("Command " + commands_list[a] + " loaded.")
+        a += 1
 
 for event in longpoll.listen():
     if event.type == VkBotEventType.MESSAGE_NEW:
