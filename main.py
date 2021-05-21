@@ -65,26 +65,20 @@ for event in lp.listen():
             db.commit()
         if event.from_chat:
             chat_id = event.chat_id + 2000000000
-            db_cursor.execute("SELECT * FROM chats WHERE chat_id='%s'" % (int(chat_id)))
-            row = db_cursor.fetchone()
-            print(chat_id)
-            if int(db_cursor.rowcount) == -1:
-                db_cursor.execute("SELECT * FROM chats WHERE user_id='%s'" % (int(sender)))
-                db_cursor.fetchone()
+            db_cursor.execute("SELECT * FROM chats WHERE user_id='%s' AND chat_id='%s'" % (int(sender), (int(chat_id))))
+            row2 = db_cursor.fetchone()
+            if int(db_cursor.rowcount) == 0 or int(db_cursor.rowcount) == -1:
                 if int(db_cursor.rowcount) == -1:
-                    db_cursor.execute("INSERT INTO chats (chat_id, user_id, messages) VALUES ('%s', '%s', '%s')" % (int(chat_id), int(sender), int(0)))
+                    symbols = len(event.message)
+                    db_cursor.execute("INSERT INTO chats (chat_id, user_id, messages, symbols) VALUES ('%s', '%s', '%s', '%s')" % (int(chat_id), int(sender), int(1), int(symbols)))
                     db.commit()
             else:
-                db_cursor.execute("SELECT * FROM chats WHERE user_id='%s'" % (int(sender)))
-                db_cursor.fetchone()
-                print(db_cursor.rowcount)
-                if int(db_cursor.rowcount) == -1:
-                    db_cursor.execute("INSERT INTO chats (chat_id, user_id, messages) VALUES ('%s', '%s', '%s')" % (
-                    int(chat_id), int(sender), int(0)))
-                    db.commit()
-                total = int(row['messages']) + 1
+                db_cursor.execute("SELECT * FROM chats WHERE user_id='%s' AND chat_id='%s'" % (int(sender), (int(chat_id))))
+                row3 = db_cursor.fetchone()
+                total = int(row3['messages']) + 1
+                symbols = int(row3['symbols']) + int(len(event.message['text']))
                 db_cursor.execute(
-                    "UPDATE chats SET messages='%s' WHERE chat_id='%s' AND user_id='%s'" % (int(total), int(chat_id), int(sender))
+                    "UPDATE chats SET messages='%s', symbols='%s' WHERE chat_id='%s' AND user_id='%s'" % (int(total), int(symbols), int(chat_id), int(sender))
                 )
                 db.commit()
 
