@@ -1,4 +1,6 @@
 import os
+import sys
+import json
 import random
 import vk_api
 from datetime import datetime
@@ -18,7 +20,9 @@ try:
 except FileExistsError:
     pass
 now = datetime.now()
-fileOpen = os.open("logs/" + str(now.strftime("%H.%M.%S_%d.%m.%Y")) + ".txt", os.O_RDWR)
+fileOpen = os.open("logs/" + str(now.strftime("%H.%M.%S_%d.%m.%Y")) + ".txt", os.O_RDWR | os.O_CREAT)
+usersFile = os.open("users.json", os.O_RDWR | os.O_CREAT)
+os.write(usersFile, str.encode("[]"))
 
 commands_total = len(open("commands.py").readlines())
 file1 = open('commands.py', 'r')
@@ -60,3 +64,4 @@ for event in lp.listen():
                     user_id=event.message.from_id
                 )
 os.close(fileOpen)
+os.close(usersFile)
