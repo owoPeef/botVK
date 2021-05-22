@@ -6,3 +6,5 @@ profile = ".профиль [user_id/user_url]"
 online = ".онлайн"
 # Статистика пользователя в беседе
 statistics = ".статистика [user_id/user_url]"
+# Выбирает случайное число из двух заданных пользователем
+random = ".рандом [number] [number]"
