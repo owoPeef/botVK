@@ -20,5 +20,8 @@ while True:
         print("All files was deleted\n")
         find = 1
 
+    if want == "exit":
+        exit()
+
     if find == 0:
         print('\nCommand "' + str(want) + '" not found!\n')
