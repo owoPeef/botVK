@@ -2,6 +2,7 @@ import os
 import random
 import time
 
+import numpy as np
 import vk_api
 import mysql.connector
 from datetime import datetime
@@ -56,7 +57,6 @@ while commands_total != a:
 for event in lp.listen():
     if event.type == VkBotEventType.MESSAGE_NEW:
         sender = event.message.from_id
-        chat_id = int(event.chat_id)
         if event.from_chat:
             os.write(fileOpen, str.encode("[" + datetime.now().strftime("%H:%M:%S") + "] (VK): new message from chat (sender: id" + str(int(sender)) + ") " + event.message['text'] + "\n"))
         if event.from_user:
@@ -97,7 +97,7 @@ for event in lp.listen():
                 vk.messages.send(
                     random_id=random.randint(0, 10000),
                     message=message,
-                    chat_id=chat_id
+                    chat_id=event.chat_id
                 )
             if event.from_user:
                 vk.messages.send(
@@ -132,7 +132,7 @@ for event in lp.listen():
                 vk.messages.send(
                     random_id=random.randint(0, 10000),
                     message=message,
-                    chat_id=chat_id
+                    chat_id=event.chat_id
                 )
             if event.from_user:
                 vk.messages.send(
@@ -142,7 +142,7 @@ for event in lp.listen():
                 )
         if event.message['text'] == '.онлайн':
             chat_users = vk.messages.getConversationMembers(
-                peer_id=2000000000 + int(chat_id),
+                peer_id=2000000000 + int(event.chat_id),
                 count=100,
                 fields="online"
             )
@@ -169,19 +169,42 @@ for event in lp.listen():
                 vk.messages.send(
                     random_id=random.randint(0, 10000),
                     message=message,
-                    chat_id=chat_id
+                    chat_id=event.chat_id
                 )
-        if event.message['text'] == '.статистика':
+        if str(event.message['text']).startswith('.статистика'):
+            ids = str(event.message['text']).split()
             if event.from_chat:
-                db_cursor.execute("SELECT * FROM chats WHERE chat_id='%s' AND user_id='%s'" % (2000000000 + int(chat_id), int(sender)))
-                stats = db_cursor.fetchone()
-                message = "Статистика пользователя: \nMSGs: " + str(stats['messages']) + " \nSymbols: " + str(
-                stats['symbols'])
-                vk.messages.send(
-                    random_id=random.randint(0, 10000),
-                    message=message,
-                    chat_id=chat_id
-                )
+                if len(ids) == 2:
+                    db_cursor.execute("SELECT * FROM chats WHERE chat_id='%s' AND user_id='%s'" % (
+                    2000000000 + int(event.chat_id), int(ids[1])))
+                    stats = db_cursor.fetchone()
+                    if db_cursor.rowcount == 1:
+                        message = "Статистика пользователя: \nMSGs: " + str(
+                            stats['messages']) + " \nSymbols: " + str(
+                            stats['symbols'])
+                        vk.messages.send(
+                            random_id=random.randint(0, 10000),
+                            message=message,
+                            chat_id=event.chat_id
+                        )
+                    else:
+                        message = "User don't registered."
+                        vk.messages.send(
+                            random_id=random.randint(0, 10000),
+                            message=message,
+                            chat_id=event.chat_id
+                        )
+                else:
+                    db_cursor.execute("SELECT * FROM chats WHERE chat_id='%s' AND user_id='%s'" % (
+                    2000000000 + int(event.chat_id), int(sender)))
+                    stats = db_cursor.fetchone()
+                    message = "Статистика пользователя: \nMSGs: " + str(stats['messages']) + " \nSymbols: " + str(
+                        stats['symbols'])
+                    vk.messages.send(
+                        random_id=random.randint(0, 10000),
+                        message=message,
+                        chat_id=event.chat_id
+                    )
         if str(event.message['text']).startswith('.рандом'):
             rand_numbers = str(event.message['text']).split(' ')
             random_total = random.randint(int(rand_numbers[1]), int(rand_numbers[2]))
