@@ -1,15 +1,15 @@
 import os
 import time
-import json
 import random
-import requests
-from PIL import Image, ImageDraw
 import vk_api
+import requests
 import mysql.connector
+from PIL import Image, ImageDraw
 from datetime import datetime
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 
 import config
+import permissions
 
 vk_session = vk_api.VkApi(token=config.vk, api_version='5.144')
 lp = VkBotLongPoll(vk_session, 204672845)
@@ -21,21 +21,12 @@ try:
 except FileExistsError:
     pass
 now = datetime.now()
-fileOpen = os.open("logs/" + str(now.strftime("%H.%M.%S_%d.%m.%Y")) + ".txt", os.O_RDWR | os.O_CREAT)
+fileOpen = os.open("logs/" + str(now.strftime("%d.%m.%Y_%H.%M.%S")) + ".txt", os.O_RDWR | os.O_CREAT)
+
 db = mysql.connector.connect(user=config.db_user, password=config.db_password, host=config.db_host, database=config.db)
-
-usersJson = os.open("users.json", os.O_RDWR | os.O_CREAT)
-users = json.load(open('users.json', 'r'))
-
 db_cursor = db.cursor(dictionary=True)
 db_cursor.execute("SELECT * FROM users")
 row = db_cursor.fetchall()
-
-b = 0
-while b != len(row):
-    users[int(row[b]['user_id'])] = str(row[b]['reg_date'])
-    b += 1
-json.dump(users, open('users.json', 'w'))
 
 os.write(fileOpen, str.encode("[" + datetime.now().strftime("%H:%M:%S") + "] (STARTER): Bot started.\n[" + datetime.now().strftime("%H:%M:%S") + "] (STARTER): Commands are loading now, please wait...\n"))
 print("["+datetime.now().strftime("%H:%M:%S")+"] Bot started.\nCommands are loading now, please wait...")
@@ -64,18 +55,17 @@ while commands_total != a:
     if commands_total == a:
         time.sleep(0.7)
         os.write(fileOpen, str.encode(
-            "\n[" + datetime.now().strftime("%H:%M:%S") + "] (STARTER): All commands loaded, BOT work."))
+            "[" + datetime.now().strftime("%H:%M:%S") + "] (STARTER): All commands loaded, BOT work."))
         print("All commands loaded, BOT work.")
     time.sleep(0.3)
 
 for event in lp.listen():
     if event.type == VkBotEventType.MESSAGE_NEW:
         sender = event.message.from_id
-        print(event.message)
         if event.from_chat:
-            os.write(fileOpen, str.encode("[" + datetime.now().strftime("%H:%M:%S") + "] (VK): new message from chat (sender: id" + str(int(sender)) + ") " + event.message['text'] + "\n"))
+            os.write(fileOpen, str.encode('\n[' + datetime.now().strftime("%H:%M:%S") + '] (VK): new message from chat (sender: id' + str(int(sender)) + '). Text: "' + event.message['text'] + '"'))
         if event.from_user:
-            os.write(fileOpen, str.encode("[" + datetime.now().strftime("%H:%M:%S") + "] (VK): new message from user (id" + str(int(sender)) + ") " + event.message['text'] + "\n"))
+            os.write(fileOpen, str.encode('\n[' + datetime.now().strftime("%H:%M:%S") + '] (VK): new message from user (id' + str(int(sender)) + '). Text: "' + event.message['text'] + '"'))
         db_cursor.execute("SELECT * FROM users WHERE user_id='%s'" % (int(sender)))
         row = db_cursor.fetchall()
         if int(db_cursor.rowcount) == 0:
@@ -252,63 +242,42 @@ for event in lp.listen():
                     message=message,
                     user_id=sender
                 )
-        if str(event.message['text']).startswith('.сер'):
-            print('Серый')
-            try:
-                if event.message['attachments'][0]:
-                    if str(event.message['attachments'][0]['type']) == 'photo':
-                        photo_url = event.message['attachments'][0]['photo']['sizes'][0]['url']
-                        photo = requests.get(photo_url, allow_redirects=True)
-                        folder = os.getcwd()
-                        os.chdir(folder + '/images')
-                        random_number = random.randint(0, 5000)
-                        open('ID_' + str(sender) + '_randID' + str(random_number) + '.jpg', 'wb').write(photo.content)
-                        image = Image.open('ID_' + str(sender) + '_randID' + str(random_number) + '.jpg')
-                        draw = ImageDraw.Draw(image, "RGBA")
-                        draw.rectangle([(0, 0), image.size], fill=(200, 200, 200, 200))
-                        # #6F6F6F
-                        image.save('ID' + str(sender) + '_randID' + str(random_number) + '_.png', 'PNG')
-                        os.chdir(folder)
-                        message = "Ваша фотография:"
-                        if event.from_chat:
-                            vk.messages.send(
-                                random_id=random.randint(0, 10000),
-                                message=message,
-                                chat_id=event.chat_id
-                            )
-                        if event.from_user:
-                            vk.messages.send(
-                                random_id=random.randint(0, 10000),
-                                message=message,
-                                user_id=sender
-                            )
+        if str(event.message['text']).startswith('.переименовать'):
+            b = 0
+            c = 0
+            user = vk.messages.getConversationMembers(peer_id=event.chat_id + 2000000000)
+            user_perms = False
+            while len(user['items']) != c:
+                if user['items'][c]['member_id'] == int(event.message.from_id):
+                    if len(user['items'][c]) >= 4:
+                        permission = "is_" + permissions.rename
+                        try:
+                            user_perms = user['items'][c][permission]
+                        except KeyError:
+                            user_perms = False
                     else:
-                        message = "Прикрепите фотографию"
-                        if event.from_chat:
-                            vk.messages.send(
-                                random_id=random.randint(0, 10000),
-                                message=message,
-                                chat_id=event.chat_id
-                            )
-                        if event.from_user:
-                            vk.messages.send(
-                                random_id=random.randint(0, 10000),
-                                message=message,
-                                user_id=sender
-                            )
-            except IndexError:
-                message = "Прикрепите фотографию"
-                if event.from_chat:
-                    vk.messages.send(
-                        random_id=random.randint(0, 10000),
-                        message=message,
-                        chat_id=event.chat_id
-                    )
-                if event.from_user:
-                    vk.messages.send(
-                        random_id=random.randint(0, 10000),
-                        message=message,
-                        user_id=sender
-                    )
+                        user_perms = False
+                    b += 1
+                c += 1
+            if not user_perms:
+                message = "У вас нет прав на выполнение данной команды!"
+            else:
+                slicer = str(event.message['text']).split()
+                title = []
+                a = 1
+                while len(slicer) != a:
+                    title.append(slicer[a])
+                    a += 1
+                end_title = " ".join(map(str, title))
+                vk.messages.editChat(
+                    chat_id=event.chat_id,
+                    title=end_title
+                )
+                message = 'Беседа была успешно переименована в "'+str(end_title)+'".'
+            vk.messages.send(
+                random_id=random.randint(0, 10000),
+                message=message,
+                chat_id=event.chat_id
+            )
 os.close(fileOpen)
 db.close()
