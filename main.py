@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import random
@@ -243,41 +244,89 @@ for event in lp.listen():
                     user_id=sender
                 )
         if str(event.message['text']).startswith('.переименовать'):
-            b = 0
-            c = 0
-            user = vk.messages.getConversationMembers(peer_id=event.chat_id + 2000000000)
-            user_perms = False
-            while len(user['items']) != c:
-                if user['items'][c]['member_id'] == int(event.message.from_id):
-                    if len(user['items'][c]) >= 4:
-                        permission = "is_" + permissions.rename
-                        try:
-                            user_perms = user['items'][c][permission]
-                        except KeyError:
+            if event.from_chat:
+                b = 0
+                c = 0
+                user = vk.messages.getConversationMembers(peer_id=event.chat_id + 2000000000)
+                user_perms = False
+                while len(user['items']) != c:
+                    if user['items'][c]['member_id'] == int(event.message.from_id):
+                        if len(user['items'][c]) >= 4:
+                            permission = "is_" + permissions.rename
+                            try:
+                                user_perms = user['items'][c][permission]
+                            except KeyError:
+                                user_perms = False
+                        else:
                             user_perms = False
-                    else:
-                        user_perms = False
-                    b += 1
-                c += 1
-            if not user_perms:
-                message = "У вас нет прав на выполнение данной команды!"
-            else:
-                slicer = str(event.message['text']).split()
-                title = []
-                a = 1
-                while len(slicer) != a:
-                    title.append(slicer[a])
-                    a += 1
-                end_title = " ".join(map(str, title))
-                vk.messages.editChat(
-                    chat_id=event.chat_id,
-                    title=end_title
+                        b += 1
+                    c += 1
+                if not user_perms:
+                    message = "У вас нет прав на выполнение данной команды!"
+                else:
+                    slicer = str(event.message['text']).split()
+                    title = []
+                    a = 1
+                    while len(slicer) != a:
+                        title.append(slicer[a])
+                        a += 1
+                    end_title = " ".join(map(str, title))
+                    vk.messages.editChat(
+                        chat_id=event.chat_id,
+                        title=end_title
+                    )
+                    message = 'Беседа была успешно переименована в "'+str(end_title)+'".'
+                vk.messages.send(
+                    random_id=random.randint(0, 10000),
+                    message=message,
+                    chat_id=event.chat_id
                 )
-                message = 'Беседа была успешно переименована в "'+str(end_title)+'".'
-            vk.messages.send(
-                random_id=random.randint(0, 10000),
-                message=message,
-                chat_id=event.chat_id
-            )
+        if event.message['text'] == ".аватар":
+            if event.from_chat:
+                b = 0
+                c = 0
+                user = vk.messages.getConversationMembers(peer_id=event.chat_id + 2000000000)
+                user_perms = False
+                while len(user['items']) != c:
+                    if user['items'][c]['member_id'] == int(event.message.from_id):
+                        if len(user['items'][c]) >= 4:
+                            permission = "is_" + permissions.avatar
+                            try:
+                                user_perms = user['items'][c][permission]
+                            except KeyError:
+                                user_perms = False
+                        else:
+                            user_perms = False
+                        b += 1
+                    c += 1
+                if not user_perms:
+                    message = "У вас нет прав на выполнение данной команды!"
+                else:
+                    try:
+                        if str(event.message['attachments'][0]['type']) == 'photo':
+                            file_path = os.getcwd() + "/images/id"+str(event.message.from_id)+".png"
+                            try:
+                                photo_url = event.message['attachments'][0]['photo']['sizes'][4]['url']
+                                photo = requests.get(photo_url, allow_redirects=True)
+                                upload = open(file_path, 'wb').write(photo.content)
+                                file_open = open(file_path, 'rb')
+                                image = {'photo': ('img.png', file_open)}
+                                upload_server = vk.photos.getChatUploadServer(chat_id=event.chat_id)
+                                photo_upload_response = requests.post(upload_server['upload_url'], files=image)
+                                photo_upload_result = json.loads(photo_upload_response.text)['response']
+                                vk.messages.setChatPhoto(file=photo_upload_result)
+                                message = "Аватарка беседы была изменена."
+                            except vk_api.ApiError:
+                                message = "[ERROR] VkApi: photo min size 200x200, 0.25 < aspect < 3"
+                            finally:
+                                file_open.close()
+                                os.remove(file_path)
+                    except IndexError:
+                        message = "Прикрепите фото, которое вы хотите поставить на аватарку беседы."
+                vk.messages.send(
+                    random_id=random.randint(0, 10000),
+                    message=message,
+                    chat_id=event.chat_id
+                )
 os.close(fileOpen)
 db.close()
