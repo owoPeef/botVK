@@ -18,7 +18,12 @@ vk = vk_session.get_api()
 
 try:
     os.makedirs("logs")
-    print("Directory 'logs' created")
+    print('Directory "logs" created')
+except FileExistsError:
+    pass
+try:
+    os.makedirs("temps")
+    print('Directory "temps" created')
 except FileExistsError:
     pass
 now = datetime.now()
@@ -304,7 +309,7 @@ for event in lp.listen():
                 else:
                     try:
                         if str(event.message['attachments'][0]['type']) == 'photo':
-                            file_path = os.getcwd() + "/images/id"+str(event.message.from_id)+".png"
+                            file_path = os.getcwd() + "/temps/id"+str(event.message.from_id)+".png"
                             try:
                                 photo_url = event.message['attachments'][0]['photo']['sizes'][4]['url']
                                 photo = requests.get(photo_url, allow_redirects=True)
