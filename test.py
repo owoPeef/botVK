@@ -1,5 +1,9 @@
+import glob
+import json
+import os
 import random
 
+import requests
 import vk_api
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 import config
@@ -53,3 +57,38 @@ for event in lp.listen():
                 message=message,
                 chat_id=event.chat_id
             )
+        if event.message['text'] == ".аватар":
+            if event.from_chat:
+                try:
+                    if str(event.message['attachments'][0]['type']) == 'photo':
+                        file_path = os.getcwd() + "/images/id"+str(event.message.from_id)+".png"
+                        try:
+                            photo_url = event.message['attachments'][0]['photo']['sizes'][4]['url']
+                            photo = requests.get(photo_url, allow_redirects=True)
+                            upload = open(file_path, 'wb').write(photo.content)
+                            file_open = open(file_path, 'rb')
+                            image = {'photo': ('img.png', file_open)}
+                            upload_server = vk.photos.getChatUploadServer(chat_id=event.chat_id)
+                            photo_upload_response = requests.post(upload_server['upload_url'], files=image)
+                            photo_upload_result = json.loads(photo_upload_response.text)['response']
+                            vk.messages.setChatPhoto(file=photo_upload_result)
+                            vk.messages.send(
+                                chat_id=event.chat_id,
+                                random_id=random.random(),
+                                message='success'
+                            )
+                        except vk_api.ApiError:
+                            vk.messages.send(
+                                chat_id=event.chat_id,
+                                random_id=random.random(),
+                                message='[ERROR] VkApi: photo min size 200x200, 0.25 < aspect < 3'
+                            )
+                        finally:
+                            file_open.close()
+                            os.remove(file_path)
+                except IndexError:
+                    vk.messages.send(
+                        chat_id=event.chat_id,
+                        random_id=random.random(),
+                        message='photo not found'
+                    )
