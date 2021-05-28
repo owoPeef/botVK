@@ -1,0 +1,7 @@
+support = "*"
+profile = "*"
+online = "*"
+statistics = "*"
+random = "*"
+rate = "*"
+rename = "admin"
