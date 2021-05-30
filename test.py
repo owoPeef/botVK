@@ -1,13 +1,15 @@
-import glob
 import json
 import os
 import random
-
+import mysql.connector
 import requests
 import vk_api
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 import config
 import permissions
+
+db = mysql.connector.connect(user=config.db_user, password=config.db_password, host=config.db_host, database=config.db)
+db_cursor = db.cursor(dictionary=True)
 
 vk_session = vk_api.VkApi(token=config.vk, api_version='5.144')
 lp = VkBotLongPoll(vk_session, 204672845)
@@ -92,3 +94,66 @@ for event in lp.listen():
                         random_id=random.random(),
                         message='photo not found'
                     )
+        if str(event.message['text']).startswith(".брак"):
+            if event.from_chat:
+                text_split = str(event.message['text']).split()
+                message = ""
+                founded = 0
+                if len(text_split) == 1:
+                    message = "Укажите айди человека"
+                if len(text_split) == 2:
+                    founded = 0
+                    if str(text_split[1]).startswith("id"):
+                        strip = str(text_split[1])[2:]
+                        if int(strip) == event.message.from_id:
+                            message = "На себе пожениться нельзя."
+                            founded = 1
+                        else:
+                            user = vk.users.get(
+                                user_ids=int(strip),
+                                name_case="nom"
+                            )
+                            message_user = vk.users.get(
+                                user_ids=int(event.message.from_id),
+                                name_case="ins"
+                            )
+                            chat = vk.messages.getConversationMembers(peer_id=2000000000 + event.chat_id)
+                            a = 0
+                            user_found = 0
+                            while len(chat['items']) != a:
+                                if chat['items'][a]['member_id'] == int(strip):
+                                    user_found = 1
+                                a += 1
+                            founded = 1
+                            if user_found == 1:
+                                db_cursor.execute("SELECT * FROM marriages WHERE first_uid='%s' OR second_uid='%s' AND chat_id='%s'" % (int(strip), int(strip), int(event.chat_id)))
+                                row = db_cursor.fetchall()
+                                db.commit()
+                                if int(db_cursor.rowcount) == 0:
+                                    message = "[id"+str(user[0]['id'])+"|"+str(user[0]['first_name'])+" "+str(user[0]['last_name'])+"], готовы ли вы вступить в брак с [id"+str(message_user[0]['id'])+"|"+str(message_user[0]['first_name'])+" "+str(message_user[0]['last_name'])+"]?"
+                                    founded = 1
+                                else:
+                                    message = "Пользователь уже состоит в браке!"
+                                    founded = 1
+                            else:
+                                message = "Пользователя с айди "+str(strip)+" нет в беседе"
+                    if str(text_split[1]).startswith("https://vk.com/id") or str(text_split[1]).startswith("http://vk.com/id"):
+                        strip = ""
+                        if str(text_split[1]).startswith("https://vk.com/id"):
+                            strip = str(text_split[1])[17:]
+                        if str(text_split[1]).startswith("http://vk.com/id"):
+                            strip = str(text_split[1])[16:]
+                        message = "start with link " + str(strip)
+                        founded = 1
+                    if str(text_split[1]).startswith(('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')):
+                        message = "start with number"
+                        founded = 1
+                    if founded == 0:
+                        message = "Значение " + str(text_split[1]) + " не является айди пользователя."
+                if len(text_split) > 2:
+                    message = "Указано " + str(len(text_split)-1) + " значения, должно быть 1."
+                vk.messages.send(
+                    chat_id=event.chat_id,
+                    random_id=random.random(),
+                    message=message
+                )
