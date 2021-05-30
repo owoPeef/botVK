@@ -1,3 +1,5 @@
+from datetime import datetime
+import time
 import json
 import os
 import random
@@ -130,7 +132,14 @@ for event in lp.listen():
                                 row = db_cursor.fetchall()
                                 db.commit()
                                 if int(db_cursor.rowcount) == 0:
-                                    message = "[id"+str(user[0]['id'])+"|"+str(user[0]['first_name'])+" "+str(user[0]['last_name'])+"], готовы ли вы вступить в брак с [id"+str(message_user[0]['id'])+"|"+str(message_user[0]['first_name'])+" "+str(message_user[0]['last_name'])+"]?"
+                                    nowDatetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                                    db_cursor.execute("INSERT INTO requests (request_date, type, to_id, from_id, chat_id) VALUES ('%s', '%s', '%s', '%s', '%s')" % (nowDatetime, "marriage", int(strip), int(event.message.from_id), int(event.chat_id)))
+                                    db.commit()
+                                    message = "[id" + str(user[0]['id']) + "|" + str(user[0]['first_name']) + " " + str(
+                                        user[0]['last_name']) + "], чтобы вступить в брак с [id" + str(
+                                        message_user[0]['id']) + "|" + str(message_user[0]['first_name']) + " " + str(
+                                        message_user[0]['last_name']) + "] напишите «.принять id" + str(
+                                        message_user[0]['id']) + "»"
                                     founded = 1
                                 else:
                                     message = "Пользователь уже состоит в браке!"
@@ -143,8 +152,41 @@ for event in lp.listen():
                             strip = str(text_split[1])[17:]
                         if str(text_split[1]).startswith("http://vk.com/id"):
                             strip = str(text_split[1])[16:]
-                        message = "start with link " + str(strip)
-                        founded = 1
+                        if int(strip) == event.message.from_id:
+                            message = "На себе пожениться нельзя."
+                            founded = 1
+                        else:
+                            user = vk.users.get(
+                                user_ids=int(strip),
+                                name_case="nom"
+                            )
+                            message_user = vk.users.get(
+                                user_ids=int(event.message.from_id),
+                                name_case="ins"
+                            )
+                            chat = vk.messages.getConversationMembers(peer_id=2000000000 + event.chat_id)
+                            a = 0
+                            user_found = 0
+                            while len(chat['items']) != a:
+                                if chat['items'][a]['member_id'] == int(strip):
+                                    user_found = 1
+                                a += 1
+                            founded = 1
+                            if user_found == 1:
+                                db_cursor.execute("SELECT * FROM marriages WHERE first_uid='%s' OR second_uid='%s' AND chat_id='%s'" % (int(strip), int(strip), int(event.chat_id)))
+                                row = db_cursor.fetchall()
+                                db.commit()
+                                if int(db_cursor.rowcount) == 0:
+                                    nowDatetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                                    db_cursor.execute("INSERT INTO requests (request_date, type, to_id, from_id, chat_id) VALUES ('%s', '%s', '%s', '%s', '%s')" % (nowDatetime, "marriage", int(strip), int(event.message.from_id), int(event.chat_id)))
+                                    db.commit()
+                                    message = "[id"+str(user[0]['id'])+"|"+str(user[0]['first_name'])+" "+str(user[0]['last_name'])+"], чтобы вступить в брак с [id"+str(message_user[0]['id'])+"|"+str(message_user[0]['first_name'])+" "+str(message_user[0]['last_name'])+"] напишите «.принять id"+str(message_user[0]['id'])+"»"
+                                    founded = 1
+                                else:
+                                    message = "Пользователь уже состоит в браке!"
+                                    founded = 1
+                            else:
+                                message = "Пользователя с айди "+str(strip)+" нет в беседе"
                     if str(text_split[1]).startswith(('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')):
                         message = "start with number"
                         founded = 1
@@ -152,6 +194,125 @@ for event in lp.listen():
                         message = "Значение " + str(text_split[1]) + " не является айди пользователя."
                 if len(text_split) > 2:
                     message = "Указано " + str(len(text_split)-1) + " значения, должно быть 1."
+                vk.messages.send(
+                    chat_id=event.chat_id,
+                    random_id=random.random(),
+                    message=message
+                )
+        if str(event.message['text']).startswith(".принять"):
+            if event.from_chat:
+                text_split = str(event.message['text']).split()
+                message = ""
+                founded = 0
+                if len(text_split) == 1:
+                    message = "Укажите айди человека"
+                if len(text_split) == 2:
+                    founded = 0
+                    if str(text_split[1]).startswith("id"):
+                        strip = str(text_split[1])[2:]
+                        db_cursor.execute("SELECT * FROM requests WHERE type='marriage' AND to_id='%s' AND from_id='%s' AND chat_id='%s'" % (int(event.message.from_id), int(strip), int(event.chat_id)))
+                        marriage_request = db_cursor.fetchall()
+                        db.commit()
+                        if int(db_cursor.rowcount) == 1:
+                            db_cursor.execute("SELECT * FROM marriages WHERE first_uid='%s' OR second_uid='%s' AND chat_id='%s'" % (int(event.message.from_id), int(event.message.from_id), int(event.chat_id)))
+                            db_cursor.fetchall()
+                            db.commit()
+                            if int(db_cursor.rowcount) == 1:
+                                message = "Вы уже состоите в браке, чтобы принять другой брак вам нужно выйти из текущего"
+                            else:
+                                nowDatetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                                db_cursor.execute("INSERT INTO marriages (marriage_date, first_uid, second_uid, chat_id) VALUES ('%s', '%s', '%s', '%s')" % (nowDatetime, int(marriage_request[0]['from_id']), int(marriage_request[0]['to_id']), int(event.chat_id)))
+                                db.commit()
+                                db_cursor.execute("DELETE FROM requests WHERE from_id='%s' AND to_id='%s'" % (int(strip), int(event.message.from_id)))
+                                db.commit()
+                                db_cursor.execute("SELECT * FROM marriages WHERE first_uid='%s' AND second_uid='%s' AND chat_id='%s'" % (int(marriage_request[0]['from_id']), int(marriage_request[0]['to_id']), int(event.chat_id)))
+                                marriageNumber = db_cursor.fetchall()[0]['marriage_id']
+                                db.commit()
+                                message = "Был зарегистрирован новый брак (#"+str(marriageNumber)+")"
+                        else:
+                            message = "Пользователь под айди " + str(strip) + " не отправлял вам запрос на вступление в брак"
+                        founded = 1
+                    if str(text_split[1]).startswith("https://vk.com/id") or str(text_split[1]).startswith("http://vk.com/id"):
+                        strip = ""
+                        if str(text_split[1]).startswith("https://vk.com/id"):
+                            strip = str(text_split[1])[17:]
+                            db_cursor.execute(
+                                "SELECT * FROM requests WHERE type='marriage' AND to_id='%s' AND from_id='%s' AND chat_id='%s'" % (
+                                int(event.message.from_id), int(strip), int(event.chat_id)))
+                            marriage_request = db_cursor.fetchall()
+                            db.commit()
+                            if int(db_cursor.rowcount) == 1:
+                                db_cursor.execute(
+                                    "SELECT * FROM marriages WHERE first_uid='%s' OR second_uid='%s' AND chat_id='%s'" % (
+                                    int(event.message.from_id), int(event.message.from_id), int(event.chat_id)))
+                                db_cursor.fetchall()
+                                db.commit()
+                                if int(db_cursor.rowcount) == 1:
+                                    message = "Вы уже состоите в браке, чтобы принять другой брак вам нужно выйти из текущего"
+                                else:
+                                    nowDatetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                                    db_cursor.execute(
+                                        "INSERT INTO marriages (marriage_date, first_uid, second_uid, chat_id) VALUES ('%s', '%s', '%s', '%s')" % (
+                                        nowDatetime, int(marriage_request[0]['from_id']),
+                                        int(marriage_request[0]['to_id']), int(event.chat_id)))
+                                    db.commit()
+                                    db_cursor.execute("DELETE FROM requests WHERE from_id='%s' AND to_id='%s'" % (
+                                    int(strip), int(event.message.from_id)))
+                                    db.commit()
+                                    db_cursor.execute(
+                                        "SELECT * FROM marriages WHERE first_uid='%s' AND second_uid='%s' AND chat_id='%s'" % (
+                                        int(marriage_request[0]['from_id']), int(marriage_request[0]['to_id']),
+                                        int(event.chat_id)))
+                                    marriageNumber = db_cursor.fetchall()[0]['marriage_id']
+                                    db.commit()
+                                    message = "Был зарегистрирован новый брак (#" + str(marriageNumber) + ")"
+                            else:
+                                message = "Пользователь под айди " + str(
+                                    strip) + " не отправлял вам запрос на вступление в брак"
+                            founded = 1
+                        if str(text_split[1]).startswith("http://vk.com/id"):
+                            strip = str(text_split[1])[16:]
+                            db_cursor.execute(
+                                "SELECT * FROM requests WHERE type='marriage' AND to_id='%s' AND from_id='%s' AND chat_id='%s'" % (
+                                int(event.message.from_id), int(strip), int(event.chat_id)))
+                            marriage_request = db_cursor.fetchall()
+                            db.commit()
+                            if int(db_cursor.rowcount) == 1:
+                                db_cursor.execute(
+                                    "SELECT * FROM marriages WHERE first_uid='%s' OR second_uid='%s' AND chat_id='%s'" % (
+                                    int(event.message.from_id), int(event.message.from_id), int(event.chat_id)))
+                                db_cursor.fetchall()
+                                db.commit()
+                                if int(db_cursor.rowcount) == 1:
+                                    message = "Вы уже состоите в браке, чтобы принять другой брак вам нужно выйти из текущего"
+                                else:
+                                    nowDatetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                                    db_cursor.execute(
+                                        "INSERT INTO marriages (marriage_date, first_uid, second_uid, chat_id) VALUES ('%s', '%s', '%s', '%s')" % (
+                                        nowDatetime, int(marriage_request[0]['from_id']),
+                                        int(marriage_request[0]['to_id']), int(event.chat_id)))
+                                    db.commit()
+                                    db_cursor.execute("DELETE FROM requests WHERE from_id='%s' AND to_id='%s'" % (
+                                    int(strip), int(event.message.from_id)))
+                                    db.commit()
+                                    db_cursor.execute(
+                                        "SELECT * FROM marriages WHERE first_uid='%s' AND second_uid='%s' AND chat_id='%s'" % (
+                                        int(marriage_request[0]['from_id']), int(marriage_request[0]['to_id']),
+                                        int(event.chat_id)))
+                                    marriageNumber = db_cursor.fetchall()[0]['marriage_id']
+                                    db.commit()
+                                    message = "Был зарегистрирован новый брак (#" + str(marriageNumber) + ")"
+                            else:
+                                message = "Пользователь под айди " + str(
+                                    strip) + " не отправлял вам запрос на вступление в брак"
+                            founded = 1
+                    if str(text_split[1]).startswith(('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')):
+                        message = "start with number"
+                        founded = 1
+                    if founded == 0:
+                        message = "Значение " + str(text_split[1]) + " не является айди пользователя."
+                if len(text_split) > 2:
+                    message = "Указано " + str(len(text_split) - 1) + " значения, должно быть 1."
                 vk.messages.send(
                     chat_id=event.chat_id,
                     random_id=random.random(),
