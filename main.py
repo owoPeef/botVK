@@ -5,7 +5,6 @@ import random
 import vk_api
 import requests
 import mysql.connector
-from PIL import Image, ImageDraw
 from datetime import datetime
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 
