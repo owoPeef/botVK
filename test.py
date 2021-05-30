@@ -1,5 +1,4 @@
 from datetime import datetime
-import time
 import json
 import os
 import random
@@ -66,6 +65,7 @@ for event in lp.listen():
                 try:
                     if str(event.message['attachments'][0]['type']) == 'photo':
                         file_path = os.getcwd() + "/images/id"+str(event.message.from_id)+".png"
+                        file_open = ""
                         try:
                             photo_url = event.message['attachments'][0]['photo']['sizes'][4]['url']
                             photo = requests.get(photo_url, allow_redirects=True)
