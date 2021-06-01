@@ -158,7 +158,15 @@ for event in lp.listen():
                     if founded == 0:
                         message = "Значение " + str(text_split[1]) + " не является айди пользователя."
                 if len(text_split) > 2:
-                    message = "Указано " + str(len(text_split)-1) + " значения, должно быть 1."
+                    b = 0
+                    a = ""
+                    # TODO
+                    while b != len(text_split):
+                        # code
+                        b += 1
+                        if b == len(text_split):
+                            a = str(text_split)[-2:]
+                    message = "Указано " + str(a) + " значения, должно быть 1."
                 vk.messages.send(
                     chat_id=event.chat_id,
                     random_id=random.random(),
