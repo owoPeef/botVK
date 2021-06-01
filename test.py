@@ -1,13 +1,13 @@
-from datetime import datetime
 import json
 import os
 import random
 import mysql.connector
 import requests
 import vk_api
-from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 import config
 import permissions
+from datetime import datetime
+from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 
 db = mysql.connector.connect(user=config.db_user, password=config.db_password, host=config.db_host, database=config.db)
 db_cursor = db.cursor(dictionary=True)
@@ -105,53 +105,21 @@ for event in lp.listen():
                     message = "Укажите айди человека"
                 if len(text_split) == 2:
                     founded = 0
+                    work = 0
+                    strip = ""
                     if str(text_split[1]).startswith("id"):
                         strip = str(text_split[1])[2:]
-                        if int(strip) == event.message.from_id:
-                            message = "На себе пожениться нельзя."
-                            founded = 1
-                        else:
-                            user = vk.users.get(
-                                user_ids=int(strip),
-                                name_case="nom"
-                            )
-                            message_user = vk.users.get(
-                                user_ids=int(event.message.from_id),
-                                name_case="ins"
-                            )
-                            chat = vk.messages.getConversationMembers(peer_id=2000000000 + event.chat_id)
-                            a = 0
-                            user_found = 0
-                            while len(chat['items']) != a:
-                                if chat['items'][a]['member_id'] == int(strip):
-                                    user_found = 1
-                                a += 1
-                            founded = 1
-                            if user_found == 1:
-                                db_cursor.execute("SELECT * FROM marriages WHERE first_uid='%s' OR second_uid='%s' AND chat_id='%s'" % (int(strip), int(strip), int(event.chat_id)))
-                                row = db_cursor.fetchall()
-                                db.commit()
-                                if int(db_cursor.rowcount) == 0:
-                                    nowDatetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                                    db_cursor.execute("INSERT INTO requests (request_date, type, to_id, from_id, chat_id) VALUES ('%s', '%s', '%s', '%s', '%s')" % (nowDatetime, "marriage", int(strip), int(event.message.from_id), int(event.chat_id)))
-                                    db.commit()
-                                    message = "[id" + str(user[0]['id']) + "|" + str(user[0]['first_name']) + " " + str(
-                                        user[0]['last_name']) + "], чтобы вступить в брак с [id" + str(
-                                        message_user[0]['id']) + "|" + str(message_user[0]['first_name']) + " " + str(
-                                        message_user[0]['last_name']) + "] напишите «.принять id" + str(
-                                        message_user[0]['id']) + "»"
-                                    founded = 1
-                                else:
-                                    message = "Пользователь уже состоит в браке!"
-                                    founded = 1
-                            else:
-                                message = "Пользователя с айди "+str(strip)+" нет в беседе"
+                        work = 1
                     if str(text_split[1]).startswith("https://vk.com/id") or str(text_split[1]).startswith("http://vk.com/id"):
-                        strip = ""
                         if str(text_split[1]).startswith("https://vk.com/id"):
                             strip = str(text_split[1])[17:]
                         if str(text_split[1]).startswith("http://vk.com/id"):
                             strip = str(text_split[1])[16:]
+                        work = 1
+                    if str(text_split[1]).startswith(('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')):
+                        strip = str(text_split[1])
+                        work = 1
+                    if work == 1:
                         if int(strip) == event.message.from_id:
                             message = "На себе пожениться нельзя."
                             founded = 1
@@ -187,9 +155,6 @@ for event in lp.listen():
                                     founded = 1
                             else:
                                 message = "Пользователя с айди "+str(strip)+" нет в беседе"
-                    if str(text_split[1]).startswith(('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')):
-                        message = "start with number"
-                        founded = 1
                     if founded == 0:
                         message = "Значение " + str(text_split[1]) + " не является айди пользователя."
                 if len(text_split) > 2:
