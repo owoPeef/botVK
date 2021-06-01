@@ -161,18 +161,23 @@ for event in lp.listen():
                     b = 0
                     a = ""
                     # TODO
+                    important = ""
                     while b != len(text_split):
                         # code
+                        if len(text_split)-1 == 1:
+                            important = "е"
+                        if str(len(text_split)-1).endswith('2') or str(len(text_split)-1).endswith('3') or str(len(text_split)-1).endswith('4'):
+                            important = "я"
+                        if len(text_split)-1 >= 5 and len(text_split):
+                            important = "й"
                         b += 1
-                        if b == len(text_split):
-                            a = str(text_split)[-2:]
-                    message = "Указано " + str(a) + " значения, должно быть 1."
+                    message = "Указано " + str(b-1) + " значени"+str(important)+", должно быть 1."
                 vk.messages.send(
                     chat_id=event.chat_id,
                     random_id=random.random(),
                     message=message
                 )
-        if str(event.message['text']).startswith(".принять"):
+        if str(event.message['text']).startswith(".брак принять"):
             if event.from_chat:
                 text_split = str(event.message['text']).split()
                 message = ""

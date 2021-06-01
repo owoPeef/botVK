@@ -28,7 +28,14 @@ except FileExistsError:
 now = datetime.now()
 fileOpen = os.open("logs/" + str(now.strftime("%d.%m.%Y_%H.%M.%S")) + ".txt", os.O_RDWR | os.O_CREAT)
 
-db = mysql.connector.connect(user=config.db_user, password=config.db_password, host=config.db_host, database=config.db)
+db = ""
+try:
+    db = mysql.connector.connect(user=config.db_user, password=config.db_password, host=config.db_host, database=config.db)
+    print("[MySQL] Connection success")
+except mysql.connector.InterfaceError:
+    print("[MySQL] Error connection")
+    time.sleep(2)
+    exit()
 db_cursor = db.cursor(dictionary=True)
 db_cursor.execute("SELECT * FROM users")
 row = db_cursor.fetchall()
