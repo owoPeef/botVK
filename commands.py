@@ -14,3 +14,11 @@ rate = ".курс"
 rename = ".переименовать [title]"
 # Обновление фотографии чата
 avatar = ".аватар {attachment}"
+# Создание запроса на брак
+marriage_request = ".брак запрос [user_id/user_url]"
+# Принятие запроса на брак
+marriage_accept = ".брак принять [user_id/user_url]"
+# Подача на развод
+marriage_divorce = ".брак развод"
+# Выводит список всех браков в беседе
+marriages_list = ".брак список"
