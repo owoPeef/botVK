@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 import time
 import random
 import vk_api
@@ -26,7 +27,7 @@ try:
 except FileExistsError:
     pass
 now = datetime.now()
-fileOpen = os.open("logs/" + str(now.strftime("%d.%m.%Y_%H.%M.%S")) + ".txt", os.O_RDWR | os.O_CREAT)
+fileOpen = os.open("logs/" + str(now.strftime("%m.%d.%Y_%H.%M.%S")) + ".txt", os.O_RDWR | os.O_CREAT)
 
 db = ""
 try:
@@ -67,8 +68,8 @@ while commands_total != a:
     if commands_total == a:
         time.sleep(0.7)
         os.write(fileOpen, str.encode(
-            "[" + datetime.now().strftime("%H:%M:%S") + "] (STARTER): All commands loaded, BOT work."))
-        print("All commands loaded, BOT work.")
+            "[%s] (STARTER): All commands loaded (%s)" % (str(datetime.now().strftime("%H:%M:%S")), str(a))))
+        print("All commands loaded (%s)" % (str(a)))
     time.sleep(0.3)
 
 for event in lp.listen():
@@ -313,6 +314,7 @@ for event in lp.listen():
                 c = 0
                 user = vk.messages.getConversationMembers(peer_id=event.chat_id + 2000000000)
                 user_perms = False
+                message = ""
                 while len(user['items']) != c:
                     if user['items'][c]['member_id'] == int(event.message.from_id):
                         if len(user['items'][c]) >= 4:
@@ -500,6 +502,7 @@ for event in lp.listen():
                     db_cursor.execute("DELETE FROM marriages WHERE first_uid='%s' OR second_uid='%s' AND chat_id='%s'" % (
                         int(event.message.from_id), int(event.message.from_id), int(event.chat_id)))
                     db.commit()
+                    user_get = []
                     if event.message.from_id == marriage[0]['first_uid']:
                         user_get = vk.users.get(
                             user_ids=marriage[0]['second_uid'],
@@ -546,6 +549,75 @@ for event in lp.listen():
                     chat_id=event.chat_id,
                     random_id=random.random(),
                     message=message
+                )
+        if event.message['text'] == ".кейс":
+            if event.from_chat:
+                rand = random.randint(1, 100)
+                prize = ""
+                if rand < 25:
+                    prize = "Хуйня"
+                if 25 < rand <= 50:
+                    prize = "Норм"
+                if 50 < rand <= 75:
+                    prize = "Средне"
+                if 75 < rand <= 100:
+                    prize = "Ахуенно"
+                vk.messages.send(
+                    message="Вам выпало %s (%s)" % (str(prize), str(rand)),
+                    random_id=random.random(),
+                    chat_id=event.chat_id
+                )
+        if str(event.message['text']).startswith(".удалить"):
+            if event.from_chat:
+                message = ""
+                text_message = str(event.message['text']).split()
+                if len(text_message) == 1:
+                    try:
+                        if event.message['reply_message']:
+                            try:
+                                vk.messages.delete(delete_for_all=True, peer_id=event.chat_id + 2000000000, conversation_message_ids=event.message['reply_message']['conversation_message_id'])
+                                message = "Message " + str(event.message['reply_message']['id']) + " was deleted (" + str(event.message['reply_message']['conversation_message_id']) + ")"
+                            except vk_api.ApiError as exception:
+                                message = "ERROR: " + str(exception)
+                    except KeyError:
+                        message = "Укажите айди сообщения"
+                else:
+                    if len(text_message) <= 3:
+                        message = "Можно указать только одно айди!"
+                    if len(text_message) == 2:
+                        try:
+                            vk.messages.delete(
+                                message_ids=text_message[1],
+                                delete_for_all=True,
+                                peer_id=event.chat_id + 2000000000
+                            )
+                            message = "Message " + str(text_message[1]) + " was deleted"
+                        except vk_api.ApiError as exception:
+                            message = "ERROR: " + str(exception)
+                vk.messages.send(
+                    message=message,
+                    chat_id=event.chat_id,
+                    random_id=random.random()
+                )
+        if event.message['text'] == ".информация":
+            if event.from_chat:
+                message = ""
+                try:
+                    if event.message['reply_message']:
+                        try:
+                            user_get = vk.users.get(
+                                user_ids=event.message['reply_message']['from_id']
+                            )
+                            unix_to_normal = datetime.fromtimestamp(int(event.message['reply_message']['date'])).strftime('%d.%m.%Y %H:%M:%S')
+                            message = str("Дата отправки: %s\nОтправитель: [id%s|%s %s]\nТекст сообщения: <<%s>>\nID сообщения всего: %s\nID сообщения в беседе: %s" % (str(unix_to_normal), str(user_get[0]['id']), str(user_get[0]['first_name']), str(user_get[0]['last_name']), str(event.message['reply_message']['text']), str(event.message['reply_message']['id']), str(event.message['reply_message']['conversation_message_id'])))
+                        except vk_api.ApiError as exception:
+                            message = "ERROR: " + str(exception)
+                except KeyError:
+                    message = "Перешлите сообщение, информацию которого вы хотите получить"
+                vk.messages.send(
+                    message=message,
+                    random_id=random.random(),
+                    chat_id=event.chat_id
                 )
 os.close(fileOpen)
 db.close()
