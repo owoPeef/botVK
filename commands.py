@@ -22,3 +22,9 @@ marriage_accept = ".брак принять [user_id/user_url]"
 marriage_divorce = ".брак развод"
 # Выводит список всех браков в беседе
 marriages_list = ".брак список"
+# Открыть кейс
+case = ".кейс"
+# Удалить сообщение по айди
+message_delete = ".удалить [message_id]"
+# Получить информацию о сообщении
+message_info = ".информация {reply_message}"
