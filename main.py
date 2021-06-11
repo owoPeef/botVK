@@ -1,11 +1,11 @@
 import json
 import os
-import sys
 import time
 import random
 import vk_api
 import requests
 import mysql.connector
+from utils import logger
 from datetime import datetime
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 
@@ -16,18 +16,8 @@ vk_session = vk_api.VkApi(token=config.vk, api_version='5.144')
 lp = VkBotLongPoll(vk_session, 204672845)
 vk = vk_session.get_api()
 
-try:
-    os.makedirs("logs")
-    print('Directory "logs" created')
-except FileExistsError:
-    pass
-try:
-    os.makedirs("temps")
-    print('Directory "temps" created')
-except FileExistsError:
-    pass
-now = datetime.now()
-fileOpen = os.open("logs/" + str(now.strftime("%m.%d.%Y_%H.%M.%S")) + ".txt", os.O_RDWR | os.O_CREAT)
+logger.folder_log_create()
+logger.folder_temp_create()
 
 db = ""
 try:
@@ -41,7 +31,6 @@ db_cursor = db.cursor(dictionary=True)
 db_cursor.execute("SELECT * FROM users")
 row = db_cursor.fetchall()
 
-os.write(fileOpen, str.encode("[" + datetime.now().strftime("%H:%M:%S") + "] (STARTER): Bot started.\n[" + datetime.now().strftime("%H:%M:%S") + "] (STARTER): Commands are loading now, please wait...\n"))
 print("["+datetime.now().strftime("%H:%M:%S")+"] Bot started.\nCommands are loading now, please wait...")
 time.sleep(3)
 
@@ -62,12 +51,15 @@ while commands_total != a:
     if not line.find("#"):
         a += 1
     else:
-        os.write(fileOpen, str.encode("["+datetime.now().strftime("%H:%M:%S")+"] (CONSOLE): Command " + commands_list[a] + " loaded.\n"))
+        file = logger.log_file()
+        logger.logger(logger.debugger_args("main", "commands_total", "command=" + commands_list[a]))
         print("Command " + commands_list[a] + " loaded.")
         a += 1
     if commands_total == a:
         time.sleep(0.7)
-        os.write(fileOpen, str.encode(
+        file = logger.log_file()
+        logger.logger(logger.debugger_args("main", "total", ""))
+        os.write(file, str.encode(
             "[%s] (STARTER): All commands loaded (%s)" % (str(datetime.now().strftime("%H:%M:%S")), str(a))))
         print("All commands loaded (%s)" % (str(a)))
     time.sleep(0.3)
@@ -332,7 +324,7 @@ for event in lp.listen():
                 else:
                     try:
                         if str(event.message['attachments'][0]['type']) == 'photo':
-                            file_path = os.getcwd() + "/temps/id"+str(event.message.from_id)+".png"
+                            file_path = os.getcwd() + "/temp/id"+str(event.message.from_id)+".png"
                             try:
                                 photo_url = event.message['attachments'][0]['photo']['sizes'][4]['url']
                                 photo = requests.get(photo_url, allow_redirects=True)
